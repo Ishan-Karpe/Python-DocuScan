@@ -36,3 +36,30 @@ cv2.destroyAllWindows()
 
 # Basically, The edge detection step is used to find the outlines of the objects in the image. Like an outline of a receipt or a piece of paper
 
+cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+cnts = imutils.grab_contours(cnts) # Grab the contours from the image
+# a countour is a outline of a curve, it is a curve joining all the continuous points.
+cnts = sorted(cnts, key = cv2.countourArea, reverse=True)[:5] # Sort the contours by area and keep only the largest ones
+
+for c in cnts:
+    peri = cv2.arcLength(c, True)
+    approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+    # we are approximating the number of vertices of the contour
+    # approxPolyDP is a function that approximates a polygonal curve
+    # we also calculated the perimiter of the countour
+    
+    if len(approx) == 4: # if the contour has 4 vertices, then we have found the screen
+        screenCnt = approx
+        break
+    
+   #if we have found the screen, then we break out of the loop and show outline
+print("STEP 2: Find contours of paper")
+cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)
+# drawContours is a function that draws contours on an image
+# it draws the countours of the paper using the numerical values of the screenCnt
+cv2.imshow("Outline", image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+# In general, we are assuming that the document is the main focus of the image and that the document is the largest object in the image
+# We are also assuming that the document is a rectangle
