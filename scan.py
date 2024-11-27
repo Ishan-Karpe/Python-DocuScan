@@ -1,78 +1,69 @@
-from skimage.filters import threshold_local
-import numpy as np
-import argparse
-import cv2
-import imutils
+from skimage.filters import threshold_local  
+import argparse  
+import cv2  
+import imutils  
+import numpy as np  
 from transform import four_point_transform
 
-ap = argparse.ArgumentParser() # Create an argument parser object
-# add_arguments has 4 parameters: switch, name, required, help
+ap = argparse.ArgumentParser() # Create an argument parser object  
 ap.add_argument("-i", "--image", required = True, help = "Path to the image to be scanned")
 args = vars(ap.parse_args())
 # lines 7-10 parse the command line arguments, needing only a single switch, which is the image path to be scannned
 
-#resizing our image to have a height of 500 pixels
-image = cv2.imread(args["image"]) # Load the image
-ratio = image.shape[0] / 500.0 # Calculate the ratio of the old height to the new height
-orig = image.copy() # Make a copy of the original image
-image = imutils.resize(image, height = 500) # Resize the image to have a height of 500 pixels, imutils is for image resizing
+# Load and resize image  
+image = cv2.imread(args["image"])  
+ratio = image.shape[0] / 500.0  
+orig = image.copy()  
+image = imutils.resize(image, height=500)  
 
-# the following will now convert all edges to grayscale mode in order to find the edges
+# Convert to grayscale and find edges  
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  
+gray = cv2.GaussianBlur(gray, (5, 5), 0)  
+edged = cv2.Canny(gray, 75, 200)  
 
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # Convert the image to grayscale, BGR to gray
-gray = cv2.GaussianBlur(gray, (5, 5), 0) # Apply a Gaussian blur to the image to remove high frequency noise
-# A gaussian blur is an image filter that removes high frequency noise from the image
-edged = cv2.Canny(gray, 75, 200) # Detect edges in the image using the Canny edge detector
-# canny is an edge detection operator
+print("STEP 1: Edge Detection")  
+cv2.imshow("Image", image)  
+cv2.imshow("Edged", edged)  
+cv2.waitKey(0)  
+cv2.destroyAllWindows()  
 
-# Why are we edge detecting? 
-# We want to find the edges of the paper in the image so that we can use these edges to find the contour of the paper
+# Find contours  
+cnts = cv2.findContours(edged.copy(), 
+                        cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)  
+cnts = imutils.grab_contours(cnts)  
+cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]  
 
-print("STEP 1: Edge Detection")
-cv2.imshow("Image", image) # Display the original image
-#imshow is a function that displays an image in a window
-cv2.imShow("Edged", edged) # Display the edge-detected image
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+screenCnt = None  # why none? if we don't find a contour, we'll know
 
-# Basically, The edge detection step is used to find the outlines of the objects in the image. Like an outline of a receipt or a piece of paper
-
-cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-cnts = imutils.grab_contours(cnts) # Grab the contours from the image
-# a countour is a outline of a curve, it is a curve joining all the continuous points.
-cnts = sorted(cnts, key = cv2.countourArea, reverse=True)[:5] # Sort the contours by area and keep only the largest ones
-
-for c in cnts:
-    peri = cv2.arcLength(c, True)
-    approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-    # we are approximating the number of vertices of the contour
-    # approxPolyDP is a function that approximates a polygonal curve
-    # we also calculated the perimiter of the countour
+for c in cnts:  
+    peri = cv2.arcLength(c, True)  
+    approx = cv2.approxPolyDP(c, 0.02 * peri, True)  
     
-    if len(approx) == 4: # if the contour has 4 vertices, then we have found the screen
-        screenCnt = approx
-        break
+    if len(approx) == 4:  
+        screenCnt = approx  
+        break  
+
+if screenCnt is not None:  
+    print("STEP 2: Find contours of paper")  
+    cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)  
+    cv2.imshow("Outline", image)  
+    cv2.waitKey(0)  
+    cv2.destroyAllWindows()  
     
-   #if we have found the screen, then we break out of the loop and show outline
-print("STEP 2: Find contours of paper")
-cv2.drawContours(image, [screenCnt], -1, (0, 255, 0), 2)
-# drawContours is a function that draws contours on an image
-# it draws the countours of the paper using the numerical values of the screenCnt
-cv2.imshow("Outline", image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-# In general, we are assuming that the document is the main focus of the image and that the document is the largest object in the image
-# We are also assuming that the document is a rectangle
-
-warped = four_point_transform(orig, screenCnt.reshape(4, 2) * ratio)
-# get a top down view
-
-warp = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
-# this converts the warped image to grayscale
-
-T = threshold_local(warped, 11, offset = 10, method="gaussian") 
-# apply adaptive thresholding to the grayscale image
-warped = (warped > T).astype("uint8") * 255
-# apply a binary threshold to the image
-# if warped is greater than T, then it is set to 255, else it is set to 0
+    # Apply perspective transform  
+    warped = four_point_transform(orig, screenCnt.reshape(4, 2) * ratio)  
+    
+    # Convert to grayscale and apply threshold  
+    warped_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)  
+    T = threshold_local(warped_gray, 11, offset=10, method="gaussian")  
+    warped = (warped_gray > T).astype("uint8") * 255  
+    
+    print("STEP 3: Apply perspective transform")  
+    
+    # Show final results  
+    cv2.imshow("Original", imutils.resize(orig, height=650))  
+    cv2.imshow("Scanned", imutils.resize(warped, height=650))  
+    cv2.waitKey(0)  
+    cv2.destroyAllWindows()  
+else:  
+    print("No document contour found. Please ensure the document edges are clearly visible.")
