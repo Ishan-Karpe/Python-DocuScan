@@ -1,0 +1,13 @@
+scikit-image
+numpy
+argparse
+opencv-python
+imutils
+
+
+# first, create a virtual environment .venv using command palette
+# then select the interpreter to be the python3 interpreter that is recomended and has the .venv
+
+#execute the following command in the terminal
+
+# python3 -m pip install -r requirements.txt
