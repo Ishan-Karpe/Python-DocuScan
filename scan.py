@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import cv2
 import imutils
+from transform import four_point_transform
 
 ap = argparse.ArgumentParser() # Create an argument parser object
 # add_arguments has 4 parameters: switch, name, required, help
@@ -63,3 +64,15 @@ cv2.destroyAllWindows()
 
 # In general, we are assuming that the document is the main focus of the image and that the document is the largest object in the image
 # We are also assuming that the document is a rectangle
+
+warped = four_point_transform(orig, screenCnt.reshape(4, 2) * ratio)
+# get a top down view
+
+warp = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+# this converts the warped image to grayscale
+
+T = threshold_local(warped, 11, offset = 10, method="gaussian") 
+# apply adaptive thresholding to the grayscale image
+warped = (warped > T).astype("uint8") * 255
+# apply a binary threshold to the image
+# if warped is greater than T, then it is set to 255, else it is set to 0
