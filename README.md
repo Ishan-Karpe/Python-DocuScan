@@ -14,5 +14,6 @@
 
    python scan.py --image (PATH TO THE FILE YOU WANT TO BE SCANNED)
    example: python scan.py --image images/receipt.jpg
+   6. if you get xcb error, run this command => export QT_QPA_PLATFORM=xcb , then rerun the command from above
 
-   6. After executing the following command above, you will see the images, contours, and top-down view. 
+   7. After executing the above command, you will see the images, contours, and top-down view. 
