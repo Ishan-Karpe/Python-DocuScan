@@ -17,3 +17,5 @@
    6. if you get xcb error, run this command => export QT_QPA_PLATFORM=xcb , then rerun the command from above
 
    7. After executing the above command, you will see the images, contours, and top-down view. 
+
+![image](https://github.com/user-attachments/assets/34a9d978-ceaa-47d3-a964-fbd0c162658d)
